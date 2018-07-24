@@ -28,7 +28,7 @@
   (let [[x y] (get-in state [:ball :location])]
     (q/stroke-weight 1)
     (q/fill 255 204 0)
-    (draw-scaled q/ellipse (:scale state) x y 1 1)))
+    (draw-scaled q/ellipse (:scale state) x y 0.5 0.5)))
 
 #_
 (defn draw-player [state player]
@@ -58,16 +58,16 @@
     (q/stroke 10)
     (q/fill 10 120 230)
     (if (neg? ty)
-      (draw-scaled q/triangle scale tx ty (- tx -2) (+ ty -1) (+ tx -2) (+ ty -1))
-      (draw-scaled q/triangle scale tx ty (- tx 2) (+ ty 1) (+ tx 2) (+ ty 1)))
+      (draw-scaled q/triangle scale tx ty (- tx -1) (+ ty -1) (+ tx -1) (+ ty -1))
+      (draw-scaled q/triangle scale tx ty (- tx 1) (+ ty 1) (+ tx 1) (+ ty 1)))
     (q/rect-mode :center)
     (if (neg? ty)
       (if (= hand :right)
-        (draw-scaled q/rect scale (- tx 2) ty 2 1 1)
-        (draw-scaled q/rect scale (+ tx 2) ty 2 1 1))
+        (draw-scaled q/rect scale (- tx 1) ty 1 0.5 1)
+        (draw-scaled q/rect scale (+ tx 1) ty 1 0.5 1))
       (if (= hand :right)
-        (draw-scaled q/rect scale (+ tx 2) ty 2 1 1)
-        (draw-scaled q/rect scale (- tx 2) ty 2 1 1)))
+        (draw-scaled q/rect scale (+ tx 1) ty 1 0.5 1)
+        (draw-scaled q/rect scale (- tx 1) ty 1 0.5 1)))
     (q/rect-mode :corner)))
 
 
@@ -86,15 +86,21 @@
         sc (fn [x] (* x scale))]
     (q/with-translation [hw hh]
       (q/with-rotation [rotation]
-        (q/fill 180)
+        (q/fill 230 230 250)
+        (q/stroke 255)
         (q/stroke-weight 4)
         (draw-scaled q/rect scale -10 -22 20 44)
-        (q/fill 150)
+
+        (q/fill 200 200 250)
         (draw-scaled q/rect scale -10 -7 20 14)
-        (draw-scaled q/line scale -11 0 11 0)
         (draw-scaled q/line scale 0 7 0 22)
         (draw-scaled q/line scale 0 -7 0 -22)
 
+        ;; net
+        (q/stroke 128)
+        (draw-scaled q/line scale -11 0 11 0)
+
+        (q/stroke 0)
         (draw-ball state)
 
         (draw-player state :a)
@@ -121,8 +127,8 @@
   (update-state {:ball {:location [5 20]}
                  :a {:location [5 22] :label "A"}
                  :b {:location [-5 22] :label "B" :hand :left}
-                 :c {:location [5 -22] :label "C" :hand :left}
-                 :d {:location [-5 -22] :label "D"}}))
+                 :c {:location [5 -22] :label "C"}
+                 :d {:location [-5 -22] :label "D" :hand :left}}))
 
 
 
