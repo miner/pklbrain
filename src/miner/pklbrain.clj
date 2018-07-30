@@ -6,6 +6,17 @@
 (defn foo []
   :pickleball)
 
+
+(defn mph->fps [mph]
+  (* 1.466668 mph))
+
+(defn fps->mph [fps]
+  (* 0.681817 fps))
+
+;; "Feet per tick"
+(defn fpt [fps]
+  (/ fps (q/target-frame-rate)))
+
 (defn rgba [n]
   "Alpha is the high byte on the integer n, then R, G, B bytes.  Returns vector of [R G B A]"
   (vector (bit-and (bit-shift-right n 16) 0xFF)
@@ -22,16 +33,46 @@
             (bit-shift-left r 16))))
 
 
+
+;; FIXME -- needs hit detection, etc.  needs to bounce after target
+(defn update-ball [state]
+  (let [speed (get-in state [:ball :speed] 0)]
+    (if (<= speed 0)
+      state
+      (let [[x y] (get-in state [:ball :location] [0 0])
+            [tx ty] (get-in state [:ball :target] [0 0])]
+        (if (and (< (q/abs-float (- x tx)) 0.3)
+                 (< (q/abs-float (- y ty)) 0.3))
+          state
+          (let [dist (q/dist x y tx ty)
+                dt (/ (fpt speed) dist)
+                ;; _ (println "dist" dist ", dt " dt ", [xy]" [x y] ", [txty]" [tx ty])
+                dx (q/lerp x tx dt)
+                dy (q/lerp y ty dt)]
+            (assoc-in state [:ball :location] [dx dy])))))))
+
+
+        
+    
+
+
+;; expect it to be called (q/target-frame-rate) times per second
 (defn update-state [state]
   (let [w (q/width)
-        h (q/height)]
-    (if (< w h)
-      (let [xf (quot w 24)
-            yf (quot h 50)]
-        (assoc state :scale (min xf yf) :rotation 0))
-      (let [xf (quot h 24)
-            yf (quot w 50)]
-        (assoc state :scale (min xf yf) :rotation q/HALF-PI)))))
+        h (q/height)
+        [w0 h0] (:screen-size state)
+        state (update-ball state)]
+    (if (and (= w w0) (= h h0))
+      state
+      (let [state (assoc state :screen-size [w h])]
+        ;; (println ".") (flush)
+        (if (< w h)
+          (let [xf (quot w 24)
+                yf (quot h 50)]
+            (assoc state :scale (min xf yf) :rotation 0))
+          (let [xf (quot h 24)
+                yf (quot w 50)]
+            (assoc state :scale (min xf yf) :rotation q/HALF-PI)))))))
 
 
 ;; FIXME: probably should just use q/scale
@@ -109,6 +150,7 @@
     (q/rect-mode :corner)))
 
 
+;; SEM FIXME:  screen-size is cached so you could use it.
 
 (defn draw-state [state]
   (q/push-style)
@@ -155,13 +197,48 @@
         (draw-ball state)
         )))
   (q/pop-style))
-  
+
+
+(defn mouse->court [state mouse-info]
+  (let [x (:x mouse-info) 
+        y (:y mouse-info) 
+        scale (:scale state)]
+    (if (zero? (:rotation state))
+      [(quot (- x (quot (q/width) 2)) scale)
+       (quot (- y (quot (q/height) 2)) scale)]
+      [(quot (- y (quot (q/height) 2)) scale)
+       (quot (- (quot (q/width) 2) x) scale)])))
+
+(defn near? [loc1 loc2]
+  (let [[x1 y1] loc1
+        [x2 y2] loc2]
+    (and (<= -1 (- x1 x2) 1)
+         (<= -1 (- y1 y2) 1))))
+
+(defn object-around [state loc]
+  (condp near? loc
+    (get-in state [:ball :location]) :ball
+    (get-in state [:a :location]) :a
+    (get-in state [:b :location]) :b
+    (get-in state [:c :location]) :c
+    (get-in state [:d :location]) :d
+    nil))
+
+(defn move-object [state object]
+  (println "Unimplemented move-object" object)
+  (flush)
+  state)
 
 (defn clicked [state mouse-info]
   (println "\nclicked at:" (q/millis))
   (println "mouse at:" mouse-info)
   (pprint state)
-  state)
+  (let [loc (mouse->court state mouse-info)
+        object (object-around state loc)]
+    (if object
+      (move-object state object)
+      (assoc-in state [:ball :target] loc))))
+
 
 (defn key-pressed [state key-info]
   ;;(println "\nkey:" (q/key-as-keyword) key-info)
@@ -180,7 +257,8 @@
 ;; down, positive Y goes left.
 
 (defn setup []
-  (update-state {:ball {:location [5 22]}
+  (update-state {:screen-size nil
+                 :ball {:location [5 22] :speed 30 :target [-5 -20]}
                  :a {:location [5 22] :label "A" :color [164 164 64]}
                  :b {:location [-5 22] :label "B" :hand :left :color [0 255 200]}
                  :d {:location [5 -7] :label "D" :color [10 128 255]}
