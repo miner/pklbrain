@@ -40,16 +40,19 @@
     (if (<= speed 0)
       state
       (let [[x y] (get-in state [:ball :location] [0 0])
-            [tx ty] (get-in state [:ball :target] [0 0])]
-        (if (and (< (q/abs-float (- x tx)) 0.3)
-                 (< (q/abs-float (- y ty)) 0.3))
+            [tx ty] (get-in state [:ball :target])]
+        (if-not tx
           state
+          (if (and (< (q/abs-float (- x tx)) 0.3)
+                   (< (q/abs-float (- y ty)) 0.3))
+            (assoc-in state [:ball :target] nil)
           (let [dist (q/dist x y tx ty)
                 dt (/ (fpt speed) dist)
                 ;; _ (println "dist" dist ", dt " dt ", [xy]" [x y] ", [txty]" [tx ty])
                 dx (q/lerp x tx dt)
                 dy (q/lerp y ty dt)]
-            (assoc-in state [:ball :location] [dx dy])))))))
+            (assoc-in state [:ball :location] [dx dy]))))))))
+          
 
 
         
@@ -231,7 +234,8 @@
 
 (defn mouse-pressed [state mouse-info]
   (let [loc (mouse->court state mouse-info)
-        object (object-around state loc)]
+        object (object-around state loc)
+        state (if (= object :ball) (assoc-in state [:ball :target] nil) state)]
     (if object
       (assoc state :moving object)
       (dissoc state :moving))))
@@ -243,10 +247,9 @@
     (dissoc state :moving)))
 
 (defn drag [state mouse-info]
-  (println "Unimplemented drag" (:moving state) "mouse" mouse-info)
-  (flush)
-  ;; might have to find click target at first
-  state)
+  (if-let [obj (:moving state)]
+    (assoc-in state [obj :location] (mouse->court state mouse-info))
+    state))
 
 
 (defn clicked [state mouse-info]
