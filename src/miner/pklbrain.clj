@@ -225,19 +225,40 @@
     nil))
 
 (defn move-object [state object]
-  (println "Unimplemented move-object" object)
+  (println "move-object" object)
   (flush)
+  (assoc state :moving object))
+
+(defn mouse-pressed [state mouse-info]
+  (let [loc (mouse->court state mouse-info)
+        object (object-around state loc)]
+    (if object
+      (assoc state :moving object)
+      (dissoc state :moving))))
+
+(defn mouse-released [state mouse-info]
+  (if-let [obj (:moving state)]
+    (let [loc (mouse->court state mouse-info)]
+      (dissoc (assoc-in state [obj :location] loc) :moving))
+    (dissoc state :moving)))
+
+(defn drag [state mouse-info]
+  (println "Unimplemented drag" (:moving state) "mouse" mouse-info)
+  (flush)
+  ;; might have to find click target at first
   state)
 
+
 (defn clicked [state mouse-info]
-  (println "\nclicked at:" (q/millis))
-  (println "mouse at:" mouse-info)
-  (pprint state)
   (let [loc (mouse->court state mouse-info)
         object (object-around state loc)]
     (if object
       (move-object state object)
-      (assoc-in state [:ball :target] loc))))
+      (do
+        (println "\nclicked at:" (q/millis))
+        (println "mouse at:" mouse-info)
+        (pprint state)
+        (assoc-in state [:ball :target] loc)))))
 
 
 (defn key-pressed [state key-info]
@@ -275,10 +296,25 @@
                :update #'update-state
                :draw #'draw-state
                :mouse-clicked #'clicked
+               :mouse-dragged #'drag
+               :mouse-released #'mouse-released
+               :mouse-pressed #'mouse-pressed
                :key-pressed #'key-pressed
                :features [:resizable]
                :middleware [qm/fun-mode])]
     sk))
+
+
+;; See options for defsketch
+;; :mouse-entered
+;; :mouse-exited
+;; :mouse-pressed
+;; :mouse-released
+;; :mouse-clicked (after press & release)
+;; :mouse-moved (no button)
+;; :mouse-dragged (moved with button pressed)
+;; :mouse-wheel
+
 
 
 (defn hack [sk key-path val]
