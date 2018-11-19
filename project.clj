@@ -2,5 +2,5 @@
   :description "PKL Brain"
   :url "https://github.com/miner/pklbrain"
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [quil "2.7.1"]])
+                 [quil "2.8.0"]])
 

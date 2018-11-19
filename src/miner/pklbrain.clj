@@ -1,10 +1,17 @@
 (ns miner.pklbrain
   (:require [clojure.pprint :refer [pprint]]
+            [miner.cividis :as civ]
             [quil.core :as q]
             [quil.middleware :as qm]))
 
 (defn foo []
   :pickleball)
+
+
+
+
+
+
 
 
 (defn mph->fps [mph]
@@ -33,6 +40,8 @@
             (bit-shift-left r 16))))
 
 
+(def color256 (mapv #(apply color-int %) civ/cividis))
+
 
 ;; FIXME -- needs hit detection, etc.  needs to bounce after target
 (defn update-ball [state]
@@ -43,8 +52,8 @@
             [tx ty] (get-in state [:ball :target])]
         (if-not tx
           state
-          (if (and (< (q/abs-float (- x tx)) 0.3)
-                   (< (q/abs-float (- y ty)) 0.3))
+          (if (and (< (q/abs (- x tx)) 0.3)
+                   (< (q/abs (- y ty)) 0.3))
             (assoc-in state [:ball :target] nil)
           (let [dist (q/dist x y tx ty)
                 dt (/ (fpt speed) dist)
@@ -155,6 +164,17 @@
 
 ;; SEM FIXME:  screen-size is cached so you could use it.
 
+(defn draw-color-bar [state]
+  (q/stroke-weight 1)
+  (dotimes [n (count color256)]
+    (apply q/fill (get civ/cividis n))
+    (if (zero? (mod n 10))
+      (q/stroke 0)
+      (apply q/stroke (get civ/cividis n)))
+    (let [y (* 2 n)
+          scale (:scale state)]
+      (q/rect (* scale 11) y 75 25))))
+
 (defn draw-state [state]
   (q/push-style)
   (q/background 200)
@@ -183,9 +203,6 @@
         (draw-scaled q/line scale 0 7 0 22)
         (draw-scaled q/line scale 0 -7 0 -22)
 
-
-
-
         ;; net
         (q/stroke 128)
         (draw-scaled q/line scale -11 0 11 0)
@@ -198,6 +215,9 @@
         (draw-player state :d)
 
         (draw-ball state)
+
+        (draw-color-bar state)
+
         )))
   (q/pop-style))
 
